@@ -347,11 +347,15 @@ pub(crate) fn hash_empty<H: FixedLengthCRH>(
 #[cfg(test)]
 mod test {
     use crate::{
-        crh::{pedersen, *},
+        crh::{pedersen, poseidon, *},
         merkle_tree::*,
     };
     use ark_ed_on_bls12_381::EdwardsProjective as JubJub;
+    use ark_ed_on_bn254::Fq;
     use ark_ff::Zero;
+    use poseidon::sbox::PoseidonSbox;
+    use poseidon::test_data::{get_mds_3, get_rounds_3};
+    use poseidon::PoseidonParameters;
 
     #[derive(Clone)]
     pub(super) struct Window4x256;
@@ -360,22 +364,25 @@ mod test {
         const NUM_WINDOWS: usize = 256;
     }
 
-    type H = pedersen::CRH<JubJub, Window4x256>;
+    type PedersenH = pedersen::CRH<JubJub, Window4x256>;
 
     struct JubJubMerkleTreeParams;
 
     impl Config for JubJubMerkleTreeParams {
         const HEIGHT: usize = 8;
-        type H = H;
+        type H = PedersenH;
     }
     type JubJubMerkleTree = MerkleTree<JubJubMerkleTreeParams>;
 
-    fn generate_merkle_tree<L: ToBytes + Clone + Eq>(leaves: &[L]) -> () {
+    fn generate_pedersen_merkle_tree<L: ToBytes + Clone + Eq>(
+        leaves: &[L],
+        root: Option<Digest<JubJubMerkleTreeParams>>,
+    ) -> () {
         let mut rng = ark_std::test_rng();
 
-        let crh_parameters = H::setup(&mut rng).unwrap();
+        let crh_parameters = PedersenH::setup(&mut rng).unwrap();
         let tree = JubJubMerkleTree::new(crh_parameters.clone(), &leaves).unwrap();
-        let root = tree.root();
+        let root = root.unwrap_or(tree.root());
         for (i, leaf) in leaves.iter().enumerate() {
             let proof = tree.generate_proof(i, &leaf).unwrap();
             assert!(proof.verify(&crh_parameters, &root, &leaf).unwrap());
@@ -388,12 +395,12 @@ mod test {
         for i in 0..4u8 {
             leaves.push([i, i, i, i, i, i, i, i]);
         }
-        generate_merkle_tree(&leaves);
+        generate_pedersen_merkle_tree(&leaves, None);
         let mut leaves = Vec::new();
         for i in 0..100u8 {
             leaves.push([i, i, i, i, i, i, i, i]);
         }
-        generate_merkle_tree(&leaves);
+        generate_pedersen_merkle_tree(&leaves, None);
     }
 
     #[test]
@@ -402,24 +409,12 @@ mod test {
         for i in 0..(1u8 << JubJubMerkleTree::HEIGHT - 1) {
             leaves.push([i, i, i, i, i, i, i, i]);
         }
-        generate_merkle_tree(&leaves);
+        generate_pedersen_merkle_tree(&leaves, None);
     }
 
     #[test]
     fn single_leaf_test() {
-        generate_merkle_tree(&[[1u8; 8]]);
-    }
-
-    fn bad_merkle_tree_verify<L: ToBytes + Clone + Eq>(leaves: &[L]) -> () {
-        let mut rng = ark_std::test_rng();
-
-        let crh_parameters = H::setup(&mut rng).unwrap();
-        let tree = JubJubMerkleTree::new(crh_parameters.clone(), &leaves).unwrap();
-        let root = JubJub::zero().into();
-        for (i, leaf) in leaves.iter().enumerate() {
-            let proof = tree.generate_proof(i, &leaf).unwrap();
-            assert!(proof.verify(&crh_parameters, &root, &leaf).unwrap());
-        }
+        generate_pedersen_merkle_tree(&[[1u8; 8]], None);
     }
 
     #[should_panic]
@@ -429,11 +424,63 @@ mod test {
         for i in 0..4u8 {
             leaves.push([i, i, i, i, i, i, i, i]);
         }
-        generate_merkle_tree(&leaves);
+        generate_pedersen_merkle_tree(&leaves, None);
         let mut leaves = Vec::new();
         for i in 0..100u8 {
             leaves.push([i, i, i, i, i, i, i, i]);
         }
-        bad_merkle_tree_verify(&leaves);
+        generate_pedersen_merkle_tree(&leaves, Some(JubJub::zero().into()));
+    }
+
+    #[derive(Default, Clone)]
+    struct PoseidonRounds3;
+
+    impl poseidon::Rounds for PoseidonRounds3 {
+        const WIDTH: usize = 3;
+        const PARTIAL_ROUNDS: usize = 57;
+        const FULL_ROUNDS: usize = 8;
+        const SBOX: PoseidonSbox = PoseidonSbox::Exponentiation(5);
+    }
+
+    type PoseidonCRH3 = poseidon::CRH<Fq, PoseidonRounds3>;
+
+    struct PoseidonMerkleTreeParams;
+
+    impl Config for PoseidonMerkleTreeParams {
+        const HEIGHT: usize = 8;
+        type H = PoseidonCRH3;
+    }
+
+    type PoseidonMerkleTree = MerkleTree<PoseidonMerkleTreeParams>;
+
+    fn generate_poseidon_merkle_tree<L: ToBytes + Clone + Eq>(
+        leaves: &[L],
+        root: Option<Digest<PoseidonMerkleTreeParams>>,
+    ) -> () {
+        let rounds = get_rounds_3::<Fq>();
+        let mds = get_mds_3::<Fq>();
+
+        let crh_parameters = PoseidonParameters::<Fq>::new(rounds, mds);
+
+        let tree = PoseidonMerkleTree::new(crh_parameters.clone(), &leaves).unwrap();
+        let root = root.unwrap_or(tree.root());
+        for (i, leaf) in leaves.iter().enumerate() {
+            let proof = tree.generate_proof(i, &leaf).unwrap();
+            assert!(proof.verify(&crh_parameters, &root, &leaf).unwrap());
+        }
+    }
+
+    #[test]
+    fn good_root_test_poseidon() {
+        let mut leaves = Vec::new();
+        for i in 0..4u8 {
+            leaves.push([i, i, i, i, i, i, i, i]);
+        }
+        generate_poseidon_merkle_tree(&leaves, None);
+        let mut leaves = Vec::new();
+        for i in 0..100u8 {
+            leaves.push([i, i, i, i, i, i, i, i]);
+        }
+        generate_poseidon_merkle_tree(&leaves, None);
     }
 }
