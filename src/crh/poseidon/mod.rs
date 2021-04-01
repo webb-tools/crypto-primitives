@@ -132,7 +132,7 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 }
 
 impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
-    const INPUT_SIZE_BITS: usize = 32 * 8;
+    const INPUT_SIZE_BITS: usize = 32 * 8 * P::WIDTH;
     type Output = F;
     type Parameters = PoseidonParameters<F>;
 
@@ -144,7 +144,7 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
     fn evaluate(parameters: &Self::Parameters, input: &[u8]) -> Result<Self::Output, Error> {
         let eval_time = start_timer!(|| "PoseidonCRH::Eval");
 
-        if (input.len() * 8) != Self::INPUT_SIZE_BITS * P::WIDTH {
+        if (input.len() * 8) != Self::INPUT_SIZE_BITS {
             panic!(
                 "incorrect input length {:?} for width {:?}",
                 input.len() / 32,
