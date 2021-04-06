@@ -2,6 +2,7 @@ use crate::crh::poseidon::sbox::PoseidonSbox;
 use crate::crh::FixedLengthCRH;
 use crate::{Error, Vec};
 use ark_ff::fields::PrimeField;
+use ark_std::error::Error as ArkError;
 use ark_std::marker::PhantomData;
 use ark_std::rand::Rng;
 
@@ -12,6 +13,24 @@ mod test_data;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
+
+#[derive(Debug)]
+pub enum PoseidonError {
+    InvalidSboxSize(usize),
+    ApplySboxFailed,
+}
+
+impl core::fmt::Display for PoseidonError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let msg = match self {
+            PoseidonError::InvalidSboxSize(s) => format!("sbox is not supported: {}", s),
+            PoseidonError::ApplySboxFailed => format!("failed to apply sbox"),
+        };
+        write!(f, "{}", msg)
+    }
+}
+
+impl ArkError for PoseidonError {}
 
 // Choice is arbitrary
 pub const PADDING_CONST: u64 = 101;
@@ -68,7 +87,7 @@ pub struct CRH<F: PrimeField, P: Rounds> {
 }
 
 impl<F: PrimeField, P: Rounds> CRH<F, P> {
-    fn permute(params: &PoseidonParameters<F>, input: Vec<F>) -> Vec<F> {
+    fn permute(params: &PoseidonParameters<F>, input: Vec<F>) -> Result<Vec<F>, PoseidonError> {
         let width = P::WIDTH;
 
         let partial_rounds = P::PARTIAL_ROUNDS;
@@ -81,7 +100,7 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
             // Sbox layer
             for i in 0..width {
                 current_state[i] += params.round_keys[round_keys_offset];
-                current_state[i] = P::SBOX.apply_sbox(current_state[i]);
+                current_state[i] = P::SBOX.apply_sbox(current_state[i])?;
                 round_keys_offset += 1;
             }
             // linear layer
@@ -96,7 +115,7 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
             }
             // partial Sbox layer, apply Sbox to only 1 element of the state.
             // Here the last one is chosen but the choice is arbitrary.
-            current_state[0] = P::SBOX.apply_sbox(current_state[0]);
+            current_state[0] = P::SBOX.apply_sbox(current_state[0])?;
             // linear layer
             current_state = Self::apply_linear_layer(&current_state, &params.mds_matrix);
         }
@@ -106,7 +125,7 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
             // Sbox layer
             for i in 0..width {
                 current_state[i] += params.round_keys[round_keys_offset];
-                current_state[i] = P::SBOX.apply_sbox(current_state[i]);
+                current_state[i] = P::SBOX.apply_sbox(current_state[i])?;
                 round_keys_offset += 1;
             }
             // linear layer
@@ -114,7 +133,7 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
         }
 
         // Finally the current_state becomes the output
-        current_state
+        Ok(current_state)
     }
 
     fn apply_linear_layer(state: &Vec<F>, mds: &Vec<Vec<F>>) -> Vec<F> {
@@ -160,7 +179,7 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
             .map(|x| F::from_le_bytes_mod_order(x))
             .collect();
 
-        let result = Self::permute(&parameters, f_inputs);
+        let result = Self::permute(&parameters, f_inputs)?;
 
         end_timer!(eval_time);
 
