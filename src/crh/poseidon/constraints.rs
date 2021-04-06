@@ -27,21 +27,18 @@ pub struct CRHGadget<F: PrimeField, P: Rounds> {
 impl<F: PrimeField, P: Rounds> CRHGadget<F, P> {
     fn permute(
         parameters: &PoseidonParametersVar<F>,
-        input: Vec<FpVar<F>>,
+        mut state: Vec<FpVar<F>>,
     ) -> Result<Vec<FpVar<F>>, SynthesisError> {
         let width = P::WIDTH;
 
-        let partial_rounds = P::PARTIAL_ROUNDS;
-        let full_rounds = P::FULL_ROUNDS / 2;
-        let mut state: Vec<FpVar<F>> = input;
         let mut round_keys_offset = 0;
 
         // full Sbox rounds
-        for _ in 0..full_rounds {
+        for _ in 0..(P::FULL_ROUNDS / 2) {
             // Substitution (S-box) layer
             for i in 0..width {
                 state[i] += &parameters.round_keys[round_keys_offset];
-                state[i] = P::SBOX.synthesize_sbox(state[i].clone())?.into();
+                state[i] = P::SBOX.synthesize_sbox(&state[i])?;
                 round_keys_offset += 1;
             }
             // Apply linear layer
@@ -49,7 +46,7 @@ impl<F: PrimeField, P: Rounds> CRHGadget<F, P> {
         }
 
         // middle partial Sbox rounds
-        for _ in 0..partial_rounds {
+        for _ in 0..P::PARTIAL_ROUNDS {
             // Substitution (S-box) layer
             for i in 0..width {
                 state[i] += &parameters.round_keys[round_keys_offset];
@@ -57,17 +54,17 @@ impl<F: PrimeField, P: Rounds> CRHGadget<F, P> {
             }
             // apply Sbox to only 1 element of the state.
             // Here the last one is chosen but the choice is arbitrary.
-            state[0] = P::SBOX.synthesize_sbox(state[0].clone())?.into();
+            state[0] = P::SBOX.synthesize_sbox(&state[0])?;
             // Linear layer
             state = Self::apply_linear_layer(&state, &parameters.mds_matrix);
         }
 
         // last full Sbox rounds
-        for _k in 0..full_rounds {
+        for _ in 0..(P::FULL_ROUNDS / 2) {
             // Substitution (S-box) layer
             for i in 0..width {
                 state[i] += &parameters.round_keys[round_keys_offset];
-                state[i] = P::SBOX.synthesize_sbox(state[i].clone())?.into();
+                state[i] = P::SBOX.synthesize_sbox(&state[i])?;
                 round_keys_offset += 1;
             }
             // Linear layer
@@ -83,7 +80,7 @@ impl<F: PrimeField, P: Rounds> CRHGadget<F, P> {
             let mut sc = FpVar::<F>::zero();
             for j in 0..state.len() {
                 let mij = &mds_matrix[i][j];
-                sc += mij * state[j].clone();
+                sc += mij * &state[j];
             }
             new_state.push(sc);
         }

@@ -87,53 +87,50 @@ pub struct CRH<F: PrimeField, P: Rounds> {
 }
 
 impl<F: PrimeField, P: Rounds> CRH<F, P> {
-    fn permute(params: &PoseidonParameters<F>, input: Vec<F>) -> Result<Vec<F>, PoseidonError> {
+    fn permute(params: &PoseidonParameters<F>, mut state: Vec<F>) -> Result<Vec<F>, PoseidonError> {
         let width = P::WIDTH;
 
-        let partial_rounds = P::PARTIAL_ROUNDS;
-        let full_rounds = P::FULL_ROUNDS / 2;
-        let mut current_state = input.to_vec();
         let mut round_keys_offset = 0;
 
         // full Sbox rounds
-        for _ in 0..full_rounds {
+        for _ in 0..(P::FULL_ROUNDS / 2) {
             // Sbox layer
             for i in 0..width {
-                current_state[i] += params.round_keys[round_keys_offset];
-                current_state[i] = P::SBOX.apply_sbox(current_state[i])?;
+                state[i] += params.round_keys[round_keys_offset];
+                state[i] = P::SBOX.apply_sbox(state[i])?;
                 round_keys_offset += 1;
             }
             // linear layer
-            current_state = Self::apply_linear_layer(&current_state, &params.mds_matrix);
+            state = Self::apply_linear_layer(&state, &params.mds_matrix);
         }
 
         // middle partial Sbox rounds
-        for _ in 0..partial_rounds {
+        for _ in 0..P::PARTIAL_ROUNDS {
             for i in 0..width {
-                current_state[i] += params.round_keys[round_keys_offset];
+                state[i] += params.round_keys[round_keys_offset];
                 round_keys_offset += 1;
             }
             // partial Sbox layer, apply Sbox to only 1 element of the state.
             // Here the last one is chosen but the choice is arbitrary.
-            current_state[0] = P::SBOX.apply_sbox(current_state[0])?;
+            state[0] = P::SBOX.apply_sbox(state[0])?;
             // linear layer
-            current_state = Self::apply_linear_layer(&current_state, &params.mds_matrix);
+            state = Self::apply_linear_layer(&state, &params.mds_matrix);
         }
 
         // last full Sbox rounds
-        for _ in 0..full_rounds {
+        for _ in 0..(P::FULL_ROUNDS / 2) {
             // Sbox layer
             for i in 0..width {
-                current_state[i] += params.round_keys[round_keys_offset];
-                current_state[i] = P::SBOX.apply_sbox(current_state[i])?;
+                state[i] += params.round_keys[round_keys_offset];
+                state[i] = P::SBOX.apply_sbox(state[i])?;
                 round_keys_offset += 1;
             }
             // linear layer
-            current_state = Self::apply_linear_layer(&current_state, &params.mds_matrix);
+            state = Self::apply_linear_layer(&state, &params.mds_matrix);
         }
 
         // Finally the current_state becomes the output
-        Ok(current_state)
+        Ok(state)
     }
 
     fn apply_linear_layer(state: &Vec<F>, mds: &Vec<Vec<F>>) -> Vec<F> {
