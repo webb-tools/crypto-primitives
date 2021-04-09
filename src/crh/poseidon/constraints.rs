@@ -2,7 +2,6 @@ use super::sbox::constraints::SboxConstraints;
 use super::{PoseidonParameters, Rounds, CRH};
 use crate::FixedLengthCRHGadget;
 use ark_ff::PrimeField;
-use ark_r1cs_std::fields::fp::AllocatedFp;
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::uint8::UInt8;
 use ark_r1cs_std::{alloc::AllocVar, fields::FieldVar, prelude::*};
@@ -101,20 +100,13 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRHGadget<CRH<F, P>, F> for CRHGadget<
         // Not giving expected results
         // let f_var_inputs: Vec<FpVar<F>> = input.to_constraint_field()?;
 
-        let f_var_inputs: Vec<FpVar<F>> = input
+        let f_var_inputs = input
             .chunks(32)
             .map(|x| {
-                let mapped_x: Vec<u8> = x.iter().map(|x| x.value().unwrap()).collect();
-                FpVar::from(
-                    AllocatedFp::new_variable(
-                        input.cs(),
-                        || Ok(F::from_le_bytes_mod_order(&mapped_x)),
-                        AllocationMode::Witness,
-                    )
-                    .unwrap(),
-                )
+                let fp_var_x = Boolean::le_bits_to_fp_var(&x.to_bits_le()?.as_slice());
+                fp_var_x
             })
-            .collect();
+            .collect::<Result<Vec<FpVar<F>>, SynthesisError>>()?;
 
         let result = Self::permute(&parameters, f_var_inputs);
         result.map(|x| x.get(1).cloned().unwrap())
