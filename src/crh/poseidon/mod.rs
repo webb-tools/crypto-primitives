@@ -160,7 +160,7 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
     fn evaluate(parameters: &Self::Parameters, input: &[u8]) -> Result<Self::Output, Error> {
         let eval_time = start_timer!(|| "PoseidonCRH::Eval");
 
-        if (input.len() * 8) != Self::INPUT_SIZE_BITS {
+        if (input.len() * 8) > Self::INPUT_SIZE_BITS {
             panic!(
                 "incorrect input length {:?} for width {:?}",
                 input.len() / 32,
@@ -171,7 +171,11 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
         // Not giving expected results
         // let elts: Vec<F> = input.to_field_elements().unwrap_or(Vec::new());
 
-        let f_inputs: Vec<F> = input
+        let mut buffer = vec![0u8; Self::INPUT_SIZE_BITS / 8];
+
+        buffer.iter_mut().zip(input).for_each(|(b, l_b)| *b = *l_b);
+
+        let f_inputs: Vec<F> = buffer
             .chunks(32)
             .map(|x| F::from_le_bytes_mod_order(x))
             .collect();

@@ -96,11 +96,23 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRHGadget<CRH<F, P>, F> for CRHGadget<
         parameters: &Self::ParametersVar,
         input: &[UInt8<F>],
     ) -> Result<Self::OutputVar, SynthesisError> {
-        assert_eq!(input.len() / 32, P::WIDTH);
+        if (input.len() / 32) > P::WIDTH {
+            panic!(
+                "incorrect input length {:?} for width {:?}",
+                input.len() / 32,
+                P::WIDTH,
+            );
+        }
         // Not giving expected results
         // let f_var_inputs: Vec<FpVar<F>> = input.to_constraint_field()?;
 
-        let f_var_inputs = input
+        let mut buffer = vec![UInt8::constant(0); P::WIDTH * 32];
+        buffer
+            .iter_mut()
+            .zip(input)
+            .for_each(|(b, l_b)| *b = l_b.clone());
+
+        let f_var_inputs = buffer
             .chunks(32)
             .map(|x| {
                 let fp_var_x = Boolean::le_bits_to_fp_var(&x.to_bits_le()?.as_slice());
