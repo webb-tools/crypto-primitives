@@ -8,7 +8,7 @@ use ark_ff::ToConstraintField;
 use ark_std::error::Error as ArkError;
 use ark_std::marker::PhantomData;
 use ark_std::rand::Rng;
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 
 pub mod sbox;
 
