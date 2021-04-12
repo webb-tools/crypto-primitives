@@ -96,13 +96,11 @@ impl<F: PrimeField> PoseidonParameters<F> {
         }
     }
     pub fn create_mds<R: Rng>(_rng: &mut R) -> Vec<Vec<F>> {
-        let mds_matrix = Vec::new();
-        mds_matrix
+        todo!();
     }
 
     pub fn create_round_keys<R: Rng>(_rng: &mut R) -> Vec<F> {
-        let round_keys = Vec::new();
-        round_keys
+        todo!();
     }
 }
 
