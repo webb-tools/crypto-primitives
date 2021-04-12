@@ -2,9 +2,13 @@ use crate::crh::poseidon::sbox::PoseidonSbox;
 use crate::crh::FixedLengthCRH;
 use crate::{Error, Vec};
 use ark_ff::fields::PrimeField;
+use ark_ff::to_bytes;
+use ark_ff::FpParameters;
+use ark_ff::ToConstraintField;
 use ark_std::error::Error as ArkError;
 use ark_std::marker::PhantomData;
 use ark_std::rand::Rng;
+use std::convert::TryFrom;
 
 pub mod sbox;
 
@@ -14,17 +18,38 @@ mod test_data;
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
+// TODO: Ideally add to ark_ff if solution is satisfiable
+// Other way is to create macro to_field_bytes!
+pub fn to_field_bytes<F: PrimeField>(elts: &[F]) -> Vec<u8> {
+    let mut final_bytes = Vec::new();
+    elts.iter().for_each(|e| {
+        let element_bytes = to_bytes![e].unwrap();
+        // TODO: what to use CAPACITY or MODULUS_BITS?
+        let max_size = usize::try_from(F::Params::CAPACITY / 8).unwrap();
+        let mut buffer = vec![0u8; max_size];
+        buffer
+            .iter_mut()
+            .zip(element_bytes)
+            .for_each(|(b, e)| *b = e);
+        final_bytes.extend(buffer)
+    });
+    final_bytes
+}
+
 #[derive(Debug)]
 pub enum PoseidonError {
     InvalidSboxSize(usize),
     ApplySboxFailed,
+    InvalidInputs,
 }
 
 impl core::fmt::Display for PoseidonError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        use PoseidonError::*;
         let msg = match self {
-            PoseidonError::InvalidSboxSize(s) => format!("sbox is not supported: {}", s),
-            PoseidonError::ApplySboxFailed => format!("failed to apply sbox"),
+            InvalidSboxSize(s) => format!("sbox is not supported: {}", s),
+            ApplySboxFailed => format!("failed to apply sbox"),
+            InvalidInputs => format!("invalid inputs"),
         };
         write!(f, "{}", msg)
     }
@@ -148,7 +173,7 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 }
 
 impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
-    const INPUT_SIZE_BITS: usize = 32 * 8 * P::WIDTH;
+    const INPUT_SIZE_BITS: usize = F::Params::MODULUS_BITS as usize * P::WIDTH;
     type Output = F;
     type Parameters = PoseidonParameters<F>;
 
@@ -160,27 +185,22 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
     fn evaluate(parameters: &Self::Parameters, input: &[u8]) -> Result<Self::Output, Error> {
         let eval_time = start_timer!(|| "PoseidonCRH::Eval");
 
-        if (input.len() * 8) > Self::INPUT_SIZE_BITS {
+        let f_inputs: Vec<F> = input
+            .to_field_elements()
+            .ok_or(PoseidonError::InvalidInputs)?;
+
+        if f_inputs.len() > P::WIDTH {
             panic!(
                 "incorrect input length {:?} for width {:?}",
-                input.len() / 32,
+                f_inputs.len(),
                 P::WIDTH,
             );
         }
 
-        // Not giving expected results
-        // let elts: Vec<F> = input.to_field_elements().unwrap_or(Vec::new());
+        let mut buffer = vec![F::zero(); P::WIDTH];
+        buffer.iter_mut().zip(f_inputs).for_each(|(p, v)| *p = v);
 
-        let mut buffer = vec![0u8; Self::INPUT_SIZE_BITS / 8];
-
-        buffer.iter_mut().zip(input).for_each(|(b, l_b)| *b = *l_b);
-
-        let f_inputs: Vec<F> = buffer
-            .chunks(32)
-            .map(|x| F::from_le_bytes_mod_order(x))
-            .collect();
-
-        let result = Self::permute(&parameters, f_inputs)?;
+        let result = Self::permute(&parameters, buffer)?;
 
         end_timer!(eval_time);
 
@@ -192,7 +212,6 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
 mod test {
     use super::*;
     use ark_ed_on_bn254::Fq;
-    use ark_ff::to_bytes;
     use ark_ff::Zero;
 
     use test_data::{
@@ -229,7 +248,7 @@ mod test {
 
         let params = PoseidonParameters::<Fq>::new(rounds, mds);
 
-        let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
+        let inp = to_field_bytes(&[Fq::zero(), Fq::from(1u128), Fq::from(2u128)]);
 
         let poseidon_res = PoseidonCRH3::evaluate(&params, &inp).unwrap();
         assert_eq!(res[1], poseidon_res);
@@ -243,14 +262,13 @@ mod test {
 
         let params = PoseidonParameters::<Fq>::new(rounds, mds);
 
-        let inp = to_bytes![
+        let inp = to_field_bytes(&[
             Fq::zero(),
             Fq::from(1u128),
             Fq::from(2u128),
             Fq::from(3u128),
-            Fq::from(4u128)
-        ]
-        .unwrap();
+            Fq::from(4u128),
+        ]);
 
         let poseidon_res = PoseidonCRH5::evaluate(&params, &inp).unwrap();
         assert_eq!(res[1], poseidon_res);

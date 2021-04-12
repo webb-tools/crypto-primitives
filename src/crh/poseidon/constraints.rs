@@ -4,6 +4,7 @@ use crate::FixedLengthCRHGadget;
 use ark_ff::PrimeField;
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::uint8::UInt8;
+use ark_r1cs_std::ToConstraintFieldGadget;
 use ark_r1cs_std::{alloc::AllocVar, fields::FieldVar, prelude::*};
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
@@ -96,31 +97,22 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRHGadget<CRH<F, P>, F> for CRHGadget<
         parameters: &Self::ParametersVar,
         input: &[UInt8<F>],
     ) -> Result<Self::OutputVar, SynthesisError> {
-        if (input.len() / 32) > P::WIDTH {
+        let f_var_inputs: Vec<FpVar<F>> = input.to_constraint_field()?;
+        if f_var_inputs.len() > P::WIDTH {
             panic!(
                 "incorrect input length {:?} for width {:?}",
-                input.len() / 32,
+                f_var_inputs.len(),
                 P::WIDTH,
             );
         }
-        // Not giving expected results
-        // let f_var_inputs: Vec<FpVar<F>> = input.to_constraint_field()?;
 
-        let mut buffer = vec![UInt8::constant(0); P::WIDTH * 32];
+        let mut buffer = vec![FpVar::zero(); P::WIDTH];
         buffer
             .iter_mut()
-            .zip(input)
-            .for_each(|(b, l_b)| *b = l_b.clone());
+            .zip(f_var_inputs)
+            .for_each(|(b, l_b)| *b = l_b);
 
-        let f_var_inputs = buffer
-            .chunks(32)
-            .map(|x| {
-                let fp_var_x = Boolean::le_bits_to_fp_var(&x.to_bits_le()?.as_slice());
-                fp_var_x
-            })
-            .collect::<Result<Vec<FpVar<F>>, SynthesisError>>()?;
-
-        let result = Self::permute(&parameters, f_var_inputs);
+        let result = Self::permute(&parameters, buffer);
         result.map(|x| x.get(1).cloned().unwrap())
     }
 }
@@ -158,12 +150,11 @@ mod test {
     use super::*;
     use crate::crh::FixedLengthCRH;
     use ark_ed_on_bn254::Fq;
-    use ark_ff::to_bytes;
     use ark_ff::Zero;
     use ark_relations::r1cs::ConstraintSystem;
 
     use crate::crh::poseidon::test_data::{get_mds_3, get_rounds_3};
-    use crate::crh::poseidon::PoseidonSbox;
+    use crate::crh::poseidon::{to_field_bytes, PoseidonSbox};
 
     #[derive(Default, Clone)]
     struct PoseidonRounds3;
@@ -185,7 +176,7 @@ mod test {
 
         let cs = ConstraintSystem::<Fq>::new_ref();
 
-        let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
+        let inp = to_field_bytes(&[Fq::zero(), Fq::from(1u128), Fq::from(2u128)]);
 
         let mut inp_u8 = Vec::new();
         for byte in inp.iter() {
