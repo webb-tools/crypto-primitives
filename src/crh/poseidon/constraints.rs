@@ -1,6 +1,7 @@
 use super::sbox::constraints::SboxConstraints;
 use super::{PoseidonParameters, Rounds, CRH};
 use crate::FixedLengthCRHGadget;
+use ark_ff::FpParameters;
 use ark_ff::PrimeField;
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::uint8::UInt8;
@@ -10,6 +11,25 @@ use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use ark_std::vec::Vec;
 use core::borrow::Borrow;
+use core::convert::TryFrom;
+
+pub fn to_field_var_bytes<F: PrimeField>(
+    elts: &[FpVar<F>],
+) -> Result<Vec<UInt8<F>>, SynthesisError> {
+    let mut final_bytes = Vec::new();
+    for e in elts {
+        let element_bytes = e.to_bytes()?;
+        // TODO: what to use CAPACITY or MODULUS_BITS?
+        let max_size = usize::try_from(F::Params::CAPACITY / 8).unwrap();
+        let mut buffer = vec![UInt8::constant(0u8); max_size];
+        buffer
+            .iter_mut()
+            .zip(element_bytes)
+            .for_each(|(b, e)| *b = e);
+        final_bytes.extend(buffer);
+    }
+    Ok(final_bytes)
+}
 
 #[derive(Default, Clone)]
 pub struct PoseidonParametersVar<F: PrimeField> {
@@ -178,10 +198,7 @@ mod test {
 
         let inp = to_field_bytes(&[Fq::zero(), Fq::from(1u128), Fq::from(2u128)]);
 
-        let mut inp_u8 = Vec::new();
-        for byte in inp.iter() {
-            inp_u8.push(UInt8::new_witness(cs.clone(), || Ok(byte)).unwrap());
-        }
+        let inp_u8 = Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(inp.clone())).unwrap();
 
         let params = PoseidonParameters::<Fq>::new(rounds, mds);
         let params_var = PoseidonParametersVar::new_variable(
