@@ -171,7 +171,7 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 }
 
 impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
-    const INPUT_SIZE_BITS: usize = F::Params::MODULUS_BITS as usize * P::WIDTH;
+    const INPUT_SIZE_BITS: usize = F::Params::CAPACITY as usize * P::WIDTH;
     type Output = F;
     type Parameters = PoseidonParameters<F>;
 
