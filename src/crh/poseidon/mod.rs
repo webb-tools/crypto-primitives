@@ -189,9 +189,10 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
 
         if f_inputs.len() > P::WIDTH {
             panic!(
-                "incorrect input length {:?} for width {:?}",
+                "incorrect input length {:?} for width {:?} -- input bits {:?}",
                 f_inputs.len(),
                 P::WIDTH,
+                input.len()
             );
         }
 
