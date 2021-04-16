@@ -1,34 +1,24 @@
 use super::sbox::constraints::SboxConstraints;
 use super::{PoseidonParameters, Rounds, CRH};
 use crate::FixedLengthCRHGadget;
-use ark_ff::FpParameters;
+use ark_ff::BigInteger;
 use ark_ff::PrimeField;
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::uint8::UInt8;
-use ark_r1cs_std::ToConstraintFieldGadget;
 use ark_r1cs_std::{alloc::AllocVar, fields::FieldVar, prelude::*};
 use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use ark_std::vec::Vec;
 use core::borrow::Borrow;
-use core::convert::TryFrom;
 
-pub fn to_field_var_bytes<F: PrimeField>(
-    elts: &[FpVar<F>],
-) -> Result<Vec<UInt8<F>>, SynthesisError> {
-    let mut final_bytes = Vec::new();
-    for e in elts {
-        let element_bytes = e.to_bytes()?;
-        // TODO: what to use CAPACITY or MODULUS_BITS?
-        let max_size = usize::try_from(F::Params::CAPACITY / 8).unwrap();
-        let mut buffer = vec![UInt8::constant(0u8); max_size];
-        buffer
-            .iter_mut()
-            .zip(element_bytes)
-            .for_each(|(b, e)| *b = e);
-        final_bytes.extend(buffer);
-    }
-    Ok(final_bytes)
+fn to_field_elements<F: PrimeField>(bytes: &[UInt8<F>]) -> Result<Vec<FpVar<F>>, SynthesisError> {
+    let max_size = F::BigInt::NUM_LIMBS * 8;
+    let res = bytes
+        .chunks(max_size)
+        .map(|chunk| Boolean::le_bits_to_fp_var(chunk.to_bits_le()?.as_slice()))
+        .collect::<Result<Vec<_>, SynthesisError>>()?;
+
+    Ok(res)
 }
 
 #[derive(Default, Clone)]
@@ -117,7 +107,7 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRHGadget<CRH<F, P>, F> for CRHGadget<
         parameters: &Self::ParametersVar,
         input: &[UInt8<F>],
     ) -> Result<Self::OutputVar, SynthesisError> {
-        let f_var_inputs: Vec<FpVar<F>> = input.to_constraint_field()?;
+        let f_var_inputs: Vec<FpVar<F>> = to_field_elements(input)?;
         if f_var_inputs.len() > P::WIDTH {
             panic!(
                 "incorrect input length {:?} for width {:?}",
@@ -170,11 +160,11 @@ mod test {
     use super::*;
     use crate::crh::FixedLengthCRH;
     use ark_ed_on_bn254::Fq;
-    use ark_ff::Zero;
+    use ark_ff::{to_bytes, Zero};
     use ark_relations::r1cs::ConstraintSystem;
 
     use crate::crh::poseidon::test_data::{get_mds_3, get_rounds_3};
-    use crate::crh::poseidon::{to_field_bytes, PoseidonSbox};
+    use crate::crh::poseidon::PoseidonSbox;
 
     #[derive(Default, Clone)]
     struct PoseidonRounds3;
@@ -196,7 +186,7 @@ mod test {
 
         let cs = ConstraintSystem::<Fq>::new_ref();
 
-        let inp = to_field_bytes(&[Fq::zero(), Fq::from(1u128), Fq::from(2u128)]);
+        let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
 
         let inp_u8 = Vec::<UInt8<Fq>>::new_input(cs.clone(), || Ok(inp.clone())).unwrap();
 

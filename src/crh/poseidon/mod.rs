@@ -2,13 +2,11 @@ use crate::crh::poseidon::sbox::PoseidonSbox;
 use crate::crh::FixedLengthCRH;
 use crate::{Error, Vec};
 use ark_ff::fields::PrimeField;
-use ark_ff::to_bytes;
+use ark_ff::BigInteger;
 use ark_ff::FpParameters;
-use ark_ff::ToConstraintField;
 use ark_std::error::Error as ArkError;
 use ark_std::marker::PhantomData;
 use ark_std::rand::Rng;
-use core::convert::TryFrom;
 
 pub mod sbox;
 
@@ -18,22 +16,14 @@ mod test_data;
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
-// TODO: Ideally add to ark_ff if solution is satisfiable
-// Other way is to create macro to_field_bytes!
-pub fn to_field_bytes<F: PrimeField>(elts: &[F]) -> Vec<u8> {
-    let mut final_bytes = Vec::new();
-    elts.iter().for_each(|e| {
-        let element_bytes = to_bytes![e].unwrap();
-        // TODO: what to use CAPACITY or MODULUS_BITS?
-        let max_size = usize::try_from(F::Params::CAPACITY / 8).unwrap();
-        let mut buffer = vec![0u8; max_size];
-        buffer
-            .iter_mut()
-            .zip(element_bytes)
-            .for_each(|(b, e)| *b = e);
-        final_bytes.extend(buffer)
-    });
-    final_bytes
+fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
+    let max_size = F::BigInt::NUM_LIMBS * 8;
+    let res = bytes
+        .chunks(max_size)
+        .map(|chunk| F::read(chunk))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(res)
 }
 
 #[derive(Debug)]
@@ -184,9 +174,7 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
     fn evaluate(parameters: &Self::Parameters, input: &[u8]) -> Result<Self::Output, Error> {
         let eval_time = start_timer!(|| "PoseidonCRH::Eval");
 
-        let f_inputs: Vec<F> = input
-            .to_field_elements()
-            .ok_or(PoseidonError::InvalidInputs)?;
+        let f_inputs: Vec<F> = to_field_elements(input)?;
 
         if f_inputs.len() > P::WIDTH {
             panic!(
@@ -212,7 +200,7 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
 mod test {
     use super::*;
     use ark_ed_on_bn254::Fq;
-    use ark_ff::Zero;
+    use ark_ff::{to_bytes, Zero};
 
     use test_data::{
         get_mds_3, get_mds_5, get_results_3, get_results_5, get_rounds_3, get_rounds_5,
@@ -248,7 +236,7 @@ mod test {
 
         let params = PoseidonParameters::<Fq>::new(rounds, mds);
 
-        let inp = to_field_bytes(&[Fq::zero(), Fq::from(1u128), Fq::from(2u128)]);
+        let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
 
         let poseidon_res = PoseidonCRH3::evaluate(&params, &inp).unwrap();
         assert_eq!(res[1], poseidon_res);
@@ -262,13 +250,14 @@ mod test {
 
         let params = PoseidonParameters::<Fq>::new(rounds, mds);
 
-        let inp = to_field_bytes(&[
+        let inp = to_bytes![
             Fq::zero(),
             Fq::from(1u128),
             Fq::from(2u128),
             Fq::from(3u128),
-            Fq::from(4u128),
-        ]);
+            Fq::from(4u128)
+        ]
+        .unwrap();
 
         let poseidon_res = PoseidonCRH5::evaluate(&params, &inp).unwrap();
         assert_eq!(res[1], poseidon_res);
