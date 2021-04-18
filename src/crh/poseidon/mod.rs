@@ -3,7 +3,6 @@ use crate::crh::FixedLengthCRH;
 use crate::{Error, Vec};
 use ark_ff::fields::PrimeField;
 use ark_ff::BigInteger;
-use ark_ff::FpParameters;
 use ark_std::error::Error as ArkError;
 use ark_std::marker::PhantomData;
 use ark_std::rand::Rng;
@@ -172,13 +171,6 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
 
     fn evaluate(parameters: &Self::Parameters, input: &[u8]) -> Result<Self::Output, Error> {
         let eval_time = start_timer!(|| "PoseidonCRH::Eval");
-
-        println!("num limbs: {}", F::BigInt::NUM_LIMBS);
-        println!("single bytes: {}", F::BigInt::NUM_LIMBS * 8);
-        println!("all bytes: {}", F::BigInt::NUM_LIMBS * 8 * P::WIDTH);
-        println!("all bits: {}", F::BigInt::NUM_LIMBS * 8 * P::WIDTH * 8);
-        println!("all bytes: {}", Self::INPUT_SIZE_BITS / 8);
-        println!("all bits {}", Self::INPUT_SIZE_BITS);
 
         let f_inputs: Vec<F> = to_field_elements(input)?;
 
