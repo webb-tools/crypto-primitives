@@ -161,8 +161,7 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 }
 
 impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
-    // To fix rounding error
-    const INPUT_SIZE_BITS: usize = ((F::Params::CAPACITY as usize / 8) * P::WIDTH) * 8;
+    const INPUT_SIZE_BITS: usize = F::BigInt::NUM_LIMBS * 16 * P::WIDTH;
     type Output = F;
     type Parameters = PoseidonParameters<F>;
 
