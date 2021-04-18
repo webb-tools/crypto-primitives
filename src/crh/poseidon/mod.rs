@@ -11,15 +11,15 @@ use ark_std::rand::Rng;
 pub mod sbox;
 
 #[cfg(test)]
-mod test_data;
+pub mod test_data;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
 
 fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
-    let max_size = F::BigInt::NUM_LIMBS * 8;
+    let max_size_bytes = F::BigInt::NUM_LIMBS * 8;
     let res = bytes
-        .chunks(max_size)
+        .chunks(max_size_bytes)
         .map(|chunk| F::read(chunk))
         .collect::<Result<Vec<_>, _>>()?;
 
@@ -161,7 +161,7 @@ impl<F: PrimeField, P: Rounds> CRH<F, P> {
 }
 
 impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
-    const INPUT_SIZE_BITS: usize = F::BigInt::NUM_LIMBS * 16 * P::WIDTH;
+    const INPUT_SIZE_BITS: usize = F::BigInt::NUM_LIMBS * 8 * P::WIDTH * 8;
     type Output = F;
     type Parameters = PoseidonParameters<F>;
 
@@ -172,6 +172,13 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
 
     fn evaluate(parameters: &Self::Parameters, input: &[u8]) -> Result<Self::Output, Error> {
         let eval_time = start_timer!(|| "PoseidonCRH::Eval");
+
+        println!("num limbs: {}", F::BigInt::NUM_LIMBS);
+        println!("single bytes: {}", F::BigInt::NUM_LIMBS * 8);
+        println!("all bytes: {}", F::BigInt::NUM_LIMBS * 8 * P::WIDTH);
+        println!("all bits: {}", F::BigInt::NUM_LIMBS * 8 * P::WIDTH * 8);
+        println!("all bytes: {}", Self::INPUT_SIZE_BITS / 8);
+        println!("all bits {}", Self::INPUT_SIZE_BITS);
 
         let f_inputs: Vec<F> = to_field_elements(input)?;
 
