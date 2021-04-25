@@ -190,7 +190,7 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRH for CRH<F, P> {
 
         end_timer!(eval_time);
 
-        Ok(result.get(1).cloned().unwrap())
+        Ok(result.get(0).cloned().ok_or(PoseidonError::InvalidInputs)?)
     }
 }
 
@@ -237,7 +237,7 @@ mod test {
         let inp = to_bytes![Fq::zero(), Fq::from(1u128), Fq::from(2u128)].unwrap();
 
         let poseidon_res = PoseidonCRH3::evaluate(&params, &inp).unwrap();
-        assert_eq!(res[1], poseidon_res);
+        assert_eq!(res[0], poseidon_res);
     }
 
     #[test]
@@ -258,6 +258,6 @@ mod test {
         .unwrap();
 
         let poseidon_res = PoseidonCRH5::evaluate(&params, &inp).unwrap();
-        assert_eq!(res[1], poseidon_res);
+        assert_eq!(res[0], poseidon_res);
     }
 }

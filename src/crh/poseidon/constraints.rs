@@ -123,7 +123,7 @@ impl<F: PrimeField, P: Rounds> FixedLengthCRHGadget<CRH<F, P>, F> for CRHGadget<
             .for_each(|(b, l_b)| *b = l_b);
 
         let result = Self::permute(&parameters, buffer);
-        result.map(|x| x.get(1).cloned().unwrap())
+        result.map(|x| x.get(0).cloned().ok_or(SynthesisError::AssignmentMissing))?
     }
 }
 
