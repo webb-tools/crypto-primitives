@@ -15,6 +15,12 @@ extern crate ark_std;
 #[macro_use]
 extern crate derivative;
 
+use ark_ff::fields::PrimeField;
+use ark_ff::BigInteger;
+use ark_r1cs_std::fields::fp::FpVar;
+use ark_r1cs_std::prelude::*;
+use ark_r1cs_std::uint8::UInt8;
+use ark_relations::r1cs::SynthesisError;
 pub(crate) use ark_std::{borrow::ToOwned, boxed::Box, vec::Vec};
 
 pub mod commitment;
@@ -59,3 +65,25 @@ impl core::fmt::Display for CryptoError {
 }
 
 impl ark_std::error::Error for CryptoError {}
+
+fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
+    let max_size_bytes = F::BigInt::NUM_LIMBS * 8;
+    let res = bytes
+        .chunks(max_size_bytes)
+        .map(|chunk| F::read(chunk))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(res)
+}
+
+fn to_field_var_elements<F: PrimeField>(
+    bytes: &[UInt8<F>],
+) -> Result<Vec<FpVar<F>>, SynthesisError> {
+    let max_size = F::BigInt::NUM_LIMBS * 8;
+    let res = bytes
+        .chunks(max_size)
+        .map(|chunk| Boolean::le_bits_to_fp_var(chunk.to_bits_le()?.as_slice()))
+        .collect::<Result<Vec<_>, SynthesisError>>()?;
+
+    Ok(res)
+}

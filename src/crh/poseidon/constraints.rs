@@ -1,7 +1,7 @@
 use super::sbox::constraints::SboxConstraints;
 use super::{PoseidonParameters, Rounds, CRH};
 use crate::crh::constraints::{CRHGadget as CRHGadgetTrait, TwoToOneCRHGadget};
-use ark_ff::BigInteger;
+use crate::to_field_var_elements;
 use ark_ff::PrimeField;
 use ark_r1cs_std::fields::fp::FpVar;
 use ark_r1cs_std::uint8::UInt8;
@@ -10,16 +10,6 @@ use ark_relations::r1cs::{Namespace, SynthesisError};
 use ark_std::marker::PhantomData;
 use ark_std::vec::Vec;
 use core::borrow::Borrow;
-
-fn to_field_elements<F: PrimeField>(bytes: &[UInt8<F>]) -> Result<Vec<FpVar<F>>, SynthesisError> {
-    let max_size = F::BigInt::NUM_LIMBS * 8;
-    let res = bytes
-        .chunks(max_size)
-        .map(|chunk| Boolean::le_bits_to_fp_var(chunk.to_bits_le()?.as_slice()))
-        .collect::<Result<Vec<_>, SynthesisError>>()?;
-
-    Ok(res)
-}
 
 #[derive(Default, Clone)]
 pub struct PoseidonParametersVar<F: PrimeField> {
@@ -107,7 +97,7 @@ impl<F: PrimeField, P: Rounds> CRHGadgetTrait<CRH<F, P>, F> for CRHGadget<F, P> 
         parameters: &Self::ParametersVar,
         input: &[UInt8<F>],
     ) -> Result<Self::OutputVar, SynthesisError> {
-        let f_var_inputs: Vec<FpVar<F>> = to_field_elements(input)?;
+        let f_var_inputs: Vec<FpVar<F>> = to_field_var_elements(input)?;
         if f_var_inputs.len() > P::WIDTH {
             panic!(
                 "incorrect input length {:?} for width {:?}",

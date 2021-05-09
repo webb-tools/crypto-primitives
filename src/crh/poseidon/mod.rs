@@ -1,4 +1,5 @@
 use crate::crh::poseidon::sbox::PoseidonSbox;
+use crate::to_field_elements;
 use crate::{Error, Vec, CRH as CRHTrait};
 use ark_ff::fields::PrimeField;
 use ark_ff::BigInteger;
@@ -15,16 +16,6 @@ pub mod test_data;
 
 #[cfg(feature = "r1cs")]
 pub mod constraints;
-
-fn to_field_elements<F: PrimeField>(bytes: &[u8]) -> Result<Vec<F>, Error> {
-    let max_size_bytes = F::BigInt::NUM_LIMBS * 8;
-    let res = bytes
-        .chunks(max_size_bytes)
-        .map(|chunk| F::read(chunk))
-        .collect::<Result<Vec<_>, _>>()?;
-
-    Ok(res)
-}
 
 #[derive(Debug)]
 pub enum PoseidonError {
