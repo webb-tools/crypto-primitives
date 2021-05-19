@@ -43,16 +43,16 @@ const R4: usize = 7;
 //
 
 const SIGMA: [[usize; 16]; 10] = [
-    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
-    [14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
-    [11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4],
-    [7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8],
-    [9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13],
-    [2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9],
-    [12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11],
-    [13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10],
-    [6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5],
-    [10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0],
+	[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+	[14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
+	[11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4],
+	[7, 9, 3, 1, 13, 12, 11, 14, 2, 6, 5, 10, 4, 0, 15, 8],
+	[9, 0, 5, 7, 2, 4, 10, 15, 14, 1, 11, 12, 6, 8, 3, 13],
+	[2, 12, 6, 10, 0, 11, 8, 3, 4, 13, 7, 5, 15, 14, 1, 9],
+	[12, 5, 1, 15, 14, 13, 4, 10, 0, 7, 6, 3, 9, 2, 8, 11],
+	[13, 11, 7, 14, 12, 1, 3, 9, 5, 0, 15, 4, 8, 6, 2, 10],
+	[6, 15, 14, 9, 11, 3, 0, 8, 12, 2, 13, 7, 1, 4, 10, 5],
+	[10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0],
 ];
 
 // 3.1.  Mixing Function G
@@ -77,24 +77,24 @@ const SIGMA: [[usize; 16]; 10] = [
 //
 
 fn mixing_g<ConstraintF: PrimeField>(
-    v: &mut [UInt32<ConstraintF>],
-    a: usize,
-    b: usize,
-    c: usize,
-    d: usize,
-    x: &UInt32<ConstraintF>,
-    y: &UInt32<ConstraintF>,
+	v: &mut [UInt32<ConstraintF>],
+	a: usize,
+	b: usize,
+	c: usize,
+	d: usize,
+	x: &UInt32<ConstraintF>,
+	y: &UInt32<ConstraintF>,
 ) -> Result<(), SynthesisError> {
-    v[a] = UInt32::addmany(&[v[a].clone(), v[b].clone(), x.clone()])?;
-    v[d] = v[d].xor(&v[a])?.rotr(R1);
-    v[c] = UInt32::addmany(&[v[c].clone(), v[d].clone()])?;
-    v[b] = v[b].xor(&v[c])?.rotr(R2);
-    v[a] = UInt32::addmany(&[v[a].clone(), v[b].clone(), y.clone()])?;
-    v[d] = v[d].xor(&v[a])?.rotr(R3);
-    v[c] = UInt32::addmany(&[v[c].clone(), v[d].clone()])?;
-    v[b] = v[b].xor(&v[c])?.rotr(R4);
+	v[a] = UInt32::addmany(&[v[a].clone(), v[b].clone(), x.clone()])?;
+	v[d] = v[d].xor(&v[a])?.rotr(R1);
+	v[c] = UInt32::addmany(&[v[c].clone(), v[d].clone()])?;
+	v[b] = v[b].xor(&v[c])?.rotr(R2);
+	v[a] = UInt32::addmany(&[v[a].clone(), v[b].clone(), y.clone()])?;
+	v[d] = v[d].xor(&v[a])?.rotr(R3);
+	v[c] = UInt32::addmany(&[v[c].clone(), v[d].clone()])?;
+	v[b] = v[b].xor(&v[c])?.rotr(R4);
 
-    Ok(())
+	Ok(())
 }
 
 // 3.2.  Compression Function F
@@ -145,60 +145,60 @@ fn mixing_g<ConstraintF: PrimeField>(
 //
 
 fn blake2s_compression<ConstraintF: PrimeField>(
-    h: &mut [UInt32<ConstraintF>],
-    m: &[UInt32<ConstraintF>],
-    t: u64,
-    f: bool,
+	h: &mut [UInt32<ConstraintF>],
+	m: &[UInt32<ConstraintF>],
+	t: u64,
+	f: bool,
 ) -> Result<(), SynthesisError> {
-    assert_eq!(h.len(), 8);
-    assert_eq!(m.len(), 16);
+	assert_eq!(h.len(), 8);
+	assert_eq!(m.len(), 16);
 
-    // static const uint32_t blake2s_iv[8] =
-    // {
-    // 0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
-    // 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
-    // };
-    //
+	// static const uint32_t blake2s_iv[8] =
+	// {
+	// 0x6A09E667, 0xBB67AE85, 0x3C6EF372, 0xA54FF53A,
+	// 0x510E527F, 0x9B05688C, 0x1F83D9AB, 0x5BE0CD19
+	// };
+	//
 
-    let mut v = Vec::with_capacity(16);
-    v.extend_from_slice(h);
-    v.push(UInt32::constant(0x6A09E667));
-    v.push(UInt32::constant(0xBB67AE85));
-    v.push(UInt32::constant(0x3C6EF372));
-    v.push(UInt32::constant(0xA54FF53A));
-    v.push(UInt32::constant(0x510E527F));
-    v.push(UInt32::constant(0x9B05688C));
-    v.push(UInt32::constant(0x1F83D9AB));
-    v.push(UInt32::constant(0x5BE0CD19));
+	let mut v = Vec::with_capacity(16);
+	v.extend_from_slice(h);
+	v.push(UInt32::constant(0x6A09E667));
+	v.push(UInt32::constant(0xBB67AE85));
+	v.push(UInt32::constant(0x3C6EF372));
+	v.push(UInt32::constant(0xA54FF53A));
+	v.push(UInt32::constant(0x510E527F));
+	v.push(UInt32::constant(0x9B05688C));
+	v.push(UInt32::constant(0x1F83D9AB));
+	v.push(UInt32::constant(0x5BE0CD19));
 
-    assert_eq!(v.len(), 16);
+	assert_eq!(v.len(), 16);
 
-    v[12] = v[12].xor(&UInt32::constant(t as u32))?;
-    v[13] = v[13].xor(&UInt32::constant((t >> 32) as u32))?;
+	v[12] = v[12].xor(&UInt32::constant(t as u32))?;
+	v[13] = v[13].xor(&UInt32::constant((t >> 32) as u32))?;
 
-    if f {
-        v[14] = v[14].xor(&UInt32::constant(u32::max_value()))?;
-    }
+	if f {
+		v[14] = v[14].xor(&UInt32::constant(u32::max_value()))?;
+	}
 
-    for i in 0..10 {
-        let s = SIGMA[i % 10];
+	for i in 0..10 {
+		let s = SIGMA[i % 10];
 
-        mixing_g(&mut v, 0, 4, 8, 12, &m[s[0]], &m[s[1]])?;
-        mixing_g(&mut v, 1, 5, 9, 13, &m[s[2]], &m[s[3]])?;
-        mixing_g(&mut v, 2, 6, 10, 14, &m[s[4]], &m[s[5]])?;
-        mixing_g(&mut v, 3, 7, 11, 15, &m[s[6]], &m[s[7]])?;
-        mixing_g(&mut v, 0, 5, 10, 15, &m[s[8]], &m[s[9]])?;
-        mixing_g(&mut v, 1, 6, 11, 12, &m[s[10]], &m[s[11]])?;
-        mixing_g(&mut v, 2, 7, 8, 13, &m[s[12]], &m[s[13]])?;
-        mixing_g(&mut v, 3, 4, 9, 14, &m[s[14]], &m[s[15]])?;
-    }
+		mixing_g(&mut v, 0, 4, 8, 12, &m[s[0]], &m[s[1]])?;
+		mixing_g(&mut v, 1, 5, 9, 13, &m[s[2]], &m[s[3]])?;
+		mixing_g(&mut v, 2, 6, 10, 14, &m[s[4]], &m[s[5]])?;
+		mixing_g(&mut v, 3, 7, 11, 15, &m[s[6]], &m[s[7]])?;
+		mixing_g(&mut v, 0, 5, 10, 15, &m[s[8]], &m[s[9]])?;
+		mixing_g(&mut v, 1, 6, 11, 12, &m[s[10]], &m[s[11]])?;
+		mixing_g(&mut v, 2, 7, 8, 13, &m[s[12]], &m[s[13]])?;
+		mixing_g(&mut v, 3, 4, 9, 14, &m[s[14]], &m[s[15]])?;
+	}
 
-    for i in 0..8 {
-        h[i] = h[i].xor(&v[i])?;
-        h[i] = h[i].xor(&v[i + 8])?;
-    }
+	for i in 0..8 {
+		h[i] = h[i].xor(&v[i])?;
+		h[i] = h[i].xor(&v[i + 8])?;
+	}
 
-    Ok(())
+	Ok(())
 }
 
 // FUNCTION BLAKE2( d[0..dd-1], ll, kk, nn )
@@ -228,63 +228,63 @@ fn blake2s_compression<ConstraintF: PrimeField>(
 //
 
 pub fn evaluate_blake2s<ConstraintF: PrimeField>(
-    input: &[Boolean<ConstraintF>],
+	input: &[Boolean<ConstraintF>],
 ) -> Result<Vec<UInt32<ConstraintF>>, SynthesisError> {
-    assert!(input.len() % 8 == 0);
-    let mut parameters = [0; 8];
-    parameters[0] = 0x01010000 ^ 32;
-    evaluate_blake2s_with_parameters(input, &parameters)
+	assert!(input.len() % 8 == 0);
+	let mut parameters = [0; 8];
+	parameters[0] = 0x01010000 ^ 32;
+	evaluate_blake2s_with_parameters(input, &parameters)
 }
 
 pub fn evaluate_blake2s_with_parameters<F: PrimeField>(
-    input: &[Boolean<F>],
-    parameters: &[u32; 8],
+	input: &[Boolean<F>],
+	parameters: &[u32; 8],
 ) -> Result<Vec<UInt32<F>>, SynthesisError> {
-    assert!(input.len() % 8 == 0);
+	assert!(input.len() % 8 == 0);
 
-    let mut h = Vec::with_capacity(8);
-    h.push(UInt32::constant(0x6A09E667).xor(&UInt32::constant(parameters[0]))?);
-    h.push(UInt32::constant(0xBB67AE85).xor(&UInt32::constant(parameters[1]))?);
-    h.push(UInt32::constant(0x3C6EF372).xor(&UInt32::constant(parameters[2]))?);
-    h.push(UInt32::constant(0xA54FF53A).xor(&UInt32::constant(parameters[3]))?);
-    h.push(UInt32::constant(0x510E527F).xor(&UInt32::constant(parameters[4]))?);
-    h.push(UInt32::constant(0x9B05688C).xor(&UInt32::constant(parameters[5]))?);
-    h.push(UInt32::constant(0x1F83D9AB).xor(&UInt32::constant(parameters[6]))?);
-    h.push(UInt32::constant(0x5BE0CD19).xor(&UInt32::constant(parameters[7]))?);
+	let mut h = Vec::with_capacity(8);
+	h.push(UInt32::constant(0x6A09E667).xor(&UInt32::constant(parameters[0]))?);
+	h.push(UInt32::constant(0xBB67AE85).xor(&UInt32::constant(parameters[1]))?);
+	h.push(UInt32::constant(0x3C6EF372).xor(&UInt32::constant(parameters[2]))?);
+	h.push(UInt32::constant(0xA54FF53A).xor(&UInt32::constant(parameters[3]))?);
+	h.push(UInt32::constant(0x510E527F).xor(&UInt32::constant(parameters[4]))?);
+	h.push(UInt32::constant(0x9B05688C).xor(&UInt32::constant(parameters[5]))?);
+	h.push(UInt32::constant(0x1F83D9AB).xor(&UInt32::constant(parameters[6]))?);
+	h.push(UInt32::constant(0x5BE0CD19).xor(&UInt32::constant(parameters[7]))?);
 
-    let mut blocks: Vec<Vec<UInt32<F>>> = vec![];
+	let mut blocks: Vec<Vec<UInt32<F>>> = vec![];
 
-    for block in input.chunks(512) {
-        let mut this_block = Vec::with_capacity(16);
-        for word in block.chunks(32) {
-            let mut tmp = word.to_vec();
-            while tmp.len() < 32 {
-                tmp.push(Boolean::constant(false));
-            }
-            this_block.push(UInt32::from_bits_le(&tmp));
-        }
-        while this_block.len() < 16 {
-            this_block.push(UInt32::constant(0));
-        }
-        blocks.push(this_block);
-    }
+	for block in input.chunks(512) {
+		let mut this_block = Vec::with_capacity(16);
+		for word in block.chunks(32) {
+			let mut tmp = word.to_vec();
+			while tmp.len() < 32 {
+				tmp.push(Boolean::constant(false));
+			}
+			this_block.push(UInt32::from_bits_le(&tmp));
+		}
+		while this_block.len() < 16 {
+			this_block.push(UInt32::constant(0));
+		}
+		blocks.push(this_block);
+	}
 
-    if blocks.is_empty() {
-        blocks.push((0..16).map(|_| UInt32::constant(0)).collect());
-    }
+	if blocks.is_empty() {
+		blocks.push((0..16).map(|_| UInt32::constant(0)).collect());
+	}
 
-    for (i, block) in blocks[0..blocks.len() - 1].iter().enumerate() {
-        blake2s_compression(&mut h, block, ((i as u64) + 1) * 64, false)?;
-    }
+	for (i, block) in blocks[0..blocks.len() - 1].iter().enumerate() {
+		blake2s_compression(&mut h, block, ((i as u64) + 1) * 64, false)?;
+	}
 
-    blake2s_compression(
-        &mut h,
-        &blocks[blocks.len() - 1],
-        (input.len() / 8) as u64,
-        true,
-    )?;
+	blake2s_compression(
+		&mut h,
+		&blocks[blocks.len() - 1],
+		(input.len() / 8) as u64,
+		true,
+	)?;
 
-    Ok(h)
+	Ok(h)
 }
 
 use crate::prf::Blake2s;
@@ -294,244 +294,238 @@ pub struct Blake2sGadget;
 pub struct OutputVar<ConstraintF: PrimeField>(pub Vec<UInt8<ConstraintF>>);
 
 impl<ConstraintF: PrimeField> EqGadget<ConstraintF> for OutputVar<ConstraintF> {
-    #[tracing::instrument(target = "r1cs")]
-    fn is_eq(&self, other: &Self) -> Result<Boolean<ConstraintF>, SynthesisError> {
-        self.0.is_eq(&other.0)
-    }
+	fn is_eq(&self, other: &Self) -> Result<Boolean<ConstraintF>, SynthesisError> {
+		self.0.is_eq(&other.0)
+	}
 
-    /// If `should_enforce == true`, enforce that `self` and `other` are equal;
-    /// else, enforce a vacuously true statement.
-    #[tracing::instrument(target = "r1cs")]
-    fn conditional_enforce_equal(
-        &self,
-        other: &Self,
-        should_enforce: &Boolean<ConstraintF>,
-    ) -> Result<(), SynthesisError> {
-        self.0.conditional_enforce_equal(&other.0, should_enforce)
-    }
+	/// If `should_enforce == true`, enforce that `self` and `other` are equal;
+	/// else, enforce a vacuously true statement.
+	fn conditional_enforce_equal(
+		&self,
+		other: &Self,
+		should_enforce: &Boolean<ConstraintF>,
+	) -> Result<(), SynthesisError> {
+		self.0.conditional_enforce_equal(&other.0, should_enforce)
+	}
 
-    /// If `should_enforce == true`, enforce that `self` and `other` are not
-    /// equal; else, enforce a vacuously true statement.
-    #[tracing::instrument(target = "r1cs")]
-    fn conditional_enforce_not_equal(
-        &self,
-        other: &Self,
-        should_enforce: &Boolean<ConstraintF>,
-    ) -> Result<(), SynthesisError> {
-        self.0
-            .as_slice()
-            .conditional_enforce_not_equal(other.0.as_slice(), should_enforce)
-    }
+	/// If `should_enforce == true`, enforce that `self` and `other` are not
+	/// equal; else, enforce a vacuously true statement.
+	fn conditional_enforce_not_equal(
+		&self,
+		other: &Self,
+		should_enforce: &Boolean<ConstraintF>,
+	) -> Result<(), SynthesisError> {
+		self.0
+			.as_slice()
+			.conditional_enforce_not_equal(other.0.as_slice(), should_enforce)
+	}
 }
 
 impl<ConstraintF: PrimeField> ToBytesGadget<ConstraintF> for OutputVar<ConstraintF> {
-    #[inline]
-    fn to_bytes(&self) -> Result<Vec<UInt8<ConstraintF>>, SynthesisError> {
-        Ok(self.0.clone())
-    }
+	#[inline]
+	fn to_bytes(&self) -> Result<Vec<UInt8<ConstraintF>>, SynthesisError> {
+		Ok(self.0.clone())
+	}
 }
 
 impl<ConstraintF: PrimeField> AllocVar<[u8; 32], ConstraintF> for OutputVar<ConstraintF> {
-    #[tracing::instrument(target = "r1cs", skip(cs, f))]
-    fn new_variable<T: Borrow<[u8; 32]>>(
-        cs: impl Into<Namespace<ConstraintF>>,
-        f: impl FnOnce() -> Result<T, SynthesisError>,
-        mode: AllocationMode,
-    ) -> Result<Self, SynthesisError> {
-        let bytes = f().map(|b| *b.borrow()).unwrap_or([0u8; 32]);
-        match mode {
-            AllocationMode::Constant => Ok(Self(UInt8::constant_vec(&bytes))),
-            AllocationMode::Input => UInt8::new_input_vec(cs, &bytes).map(Self),
-            AllocationMode::Witness => UInt8::new_witness_vec(cs, &bytes).map(Self),
-        }
-    }
+	fn new_variable<T: Borrow<[u8; 32]>>(
+		cs: impl Into<Namespace<ConstraintF>>,
+		f: impl FnOnce() -> Result<T, SynthesisError>,
+		mode: AllocationMode,
+	) -> Result<Self, SynthesisError> {
+		let bytes = f().map(|b| *b.borrow()).unwrap_or([0u8; 32]);
+		match mode {
+			AllocationMode::Constant => Ok(Self(UInt8::constant_vec(&bytes))),
+			AllocationMode::Input => UInt8::new_input_vec(cs, &bytes).map(Self),
+			AllocationMode::Witness => UInt8::new_witness_vec(cs, &bytes).map(Self),
+		}
+	}
 }
 
 impl<F: PrimeField> R1CSVar<F> for OutputVar<F> {
-    type Value = [u8; 32];
+	type Value = [u8; 32];
 
-    fn cs(&self) -> ConstraintSystemRef<F> {
-        self.0.cs()
-    }
+	fn cs(&self) -> ConstraintSystemRef<F> {
+		self.0.cs()
+	}
 
-    fn value(&self) -> Result<Self::Value, SynthesisError> {
-        let mut value = [0u8; 32];
-        for (val_i, self_i) in value.iter_mut().zip(&self.0) {
-            *val_i = self_i.value()?;
-        }
-        Ok(value)
-    }
+	fn value(&self) -> Result<Self::Value, SynthesisError> {
+		let mut value = [0u8; 32];
+		for (val_i, self_i) in value.iter_mut().zip(&self.0) {
+			*val_i = self_i.value()?;
+		}
+		Ok(value)
+	}
 }
 
 impl<F: PrimeField> PRFGadget<Blake2s, F> for Blake2sGadget {
-    type OutputVar = OutputVar<F>;
+	type OutputVar = OutputVar<F>;
 
-    #[tracing::instrument(target = "r1cs", skip(cs))]
-    fn new_seed(cs: impl Into<Namespace<F>>, seed: &[u8; 32]) -> Vec<UInt8<F>> {
-        let ns = cs.into();
-        let cs = ns.cs();
-        UInt8::new_witness_vec(ark_relations::ns!(cs, "New Blake2s seed"), seed).unwrap()
-    }
+	fn new_seed(cs: impl Into<Namespace<F>>, seed: &[u8; 32]) -> Vec<UInt8<F>> {
+		let ns = cs.into();
+		let cs = ns.cs();
+		UInt8::new_witness_vec(ark_relations::ns!(cs, "New Blake2s seed"), seed).unwrap()
+	}
 
-    #[tracing::instrument(target = "r1cs", skip(seed, input))]
-    fn evaluate(seed: &[UInt8<F>], input: &[UInt8<F>]) -> Result<Self::OutputVar, SynthesisError> {
-        assert_eq!(seed.len(), 32);
-        let input: Vec<_> = seed
-            .iter()
-            .chain(input)
-            .flat_map(|b| b.to_bits_le().unwrap())
-            .collect();
-        let result: Vec<_> = evaluate_blake2s(&input)?
-            .into_iter()
-            .flat_map(|int| int.to_bytes().unwrap())
-            .collect();
-        Ok(OutputVar(result))
-    }
+	fn evaluate(seed: &[UInt8<F>], input: &[UInt8<F>]) -> Result<Self::OutputVar, SynthesisError> {
+		assert_eq!(seed.len(), 32);
+		let input: Vec<_> = seed
+			.iter()
+			.chain(input)
+			.flat_map(|b| b.to_bits_le().unwrap())
+			.collect();
+		let result: Vec<_> = evaluate_blake2s(&input)?
+			.into_iter()
+			.flat_map(|int| int.to_bytes().unwrap())
+			.collect();
+		Ok(OutputVar(result))
+	}
 }
 
 #[cfg(test)]
 mod test {
-    use ark_ed_on_bls12_381::Fq as Fr;
-    use ark_std::rand::Rng;
+	use ark_ed_on_bls12_381::Fq as Fr;
+	use ark_std::rand::Rng;
 
-    use crate::prf::blake2s::{constraints::evaluate_blake2s, Blake2s as B2SPRF};
-    use ark_relations::r1cs::ConstraintSystem;
-    use blake2::VarBlake2s;
+	use crate::prf::blake2s::{constraints::evaluate_blake2s, Blake2s as B2SPRF};
+	use ark_relations::r1cs::ConstraintSystem;
+	use blake2::VarBlake2s;
 
-    use super::Blake2sGadget;
-    use ark_r1cs_std::prelude::*;
+	use super::Blake2sGadget;
+	use ark_r1cs_std::prelude::*;
 
-    #[test]
-    fn test_blake2s_constraints() {
-        let cs = ConstraintSystem::<Fr>::new_ref();
-        let input_bits: Vec<_> = (0..512)
-            .map(|_| {
-                Boolean::new_witness(ark_relations::ns!(cs, "input bit"), || Ok(true)).unwrap()
-            })
-            .collect();
-        evaluate_blake2s(&input_bits).unwrap();
-        assert!(cs.is_satisfied().unwrap());
-        assert_eq!(cs.num_constraints(), 21792);
-    }
+	#[test]
+	fn test_blake2s_constraints() {
+		let cs = ConstraintSystem::<Fr>::new_ref();
+		let input_bits: Vec<_> = (0..512)
+			.map(|_| {
+				Boolean::new_witness(ark_relations::ns!(cs, "input bit"), || Ok(true)).unwrap()
+			})
+			.collect();
+		evaluate_blake2s(&input_bits).unwrap();
+		assert!(cs.is_satisfied().unwrap());
+		assert_eq!(cs.num_constraints(), 21792);
+	}
 
-    #[test]
-    fn test_blake2s_prf() {
-        use crate::prf::{PRFGadget, PRF};
+	#[test]
+	fn test_blake2s_prf() {
+		use crate::prf::{PRFGadget, PRF};
 
-        let mut rng = ark_std::test_rng();
-        let cs = ConstraintSystem::<Fr>::new_ref();
+		let mut rng = ark_std::test_rng();
+		let cs = ConstraintSystem::<Fr>::new_ref();
 
-        let mut seed = [0u8; 32];
-        rng.fill(&mut seed);
+		let mut seed = [0u8; 32];
+		rng.fill(&mut seed);
 
-        let mut input = [0u8; 32];
-        rng.fill(&mut input);
+		let mut input = [0u8; 32];
+		rng.fill(&mut input);
 
-        let seed_var = Blake2sGadget::new_seed(cs.clone(), &seed);
-        let input_var =
-            UInt8::new_witness_vec(ark_relations::ns!(cs, "declare_input"), &input).unwrap();
-        let out = B2SPRF::evaluate(&seed, &input).unwrap();
-        let actual_out_var = <Blake2sGadget as PRFGadget<_, Fr>>::OutputVar::new_witness(
-            ark_relations::ns!(cs, "declare_output"),
-            || Ok(out),
-        )
-        .unwrap();
+		let seed_var = Blake2sGadget::new_seed(cs.clone(), &seed);
+		let input_var =
+			UInt8::new_witness_vec(ark_relations::ns!(cs, "declare_input"), &input).unwrap();
+		let out = B2SPRF::evaluate(&seed, &input).unwrap();
+		let actual_out_var = <Blake2sGadget as PRFGadget<_, Fr>>::OutputVar::new_witness(
+			ark_relations::ns!(cs, "declare_output"),
+			|| Ok(out),
+		)
+		.unwrap();
 
-        let output_var = Blake2sGadget::evaluate(&seed_var, &input_var).unwrap();
-        output_var.enforce_equal(&actual_out_var).unwrap();
+		let output_var = Blake2sGadget::evaluate(&seed_var, &input_var).unwrap();
+		output_var.enforce_equal(&actual_out_var).unwrap();
 
-        if !cs.is_satisfied().unwrap() {
-            println!(
-                "which is unsatisfied: {:?}",
-                cs.which_is_unsatisfied().unwrap()
-            );
-        }
-        assert!(cs.is_satisfied().unwrap());
-    }
+		if !cs.is_satisfied().unwrap() {
+			println!(
+				"which is unsatisfied: {:?}",
+				cs.which_is_unsatisfied().unwrap()
+			);
+		}
+		assert!(cs.is_satisfied().unwrap());
+	}
 
-    #[test]
-    fn test_blake2s_precomp_constraints() {
-        // Test that 512 fixed leading bits (constants)
-        // doesn't result in more constraints.
+	#[test]
+	fn test_blake2s_precomp_constraints() {
+		// Test that 512 fixed leading bits (constants)
+		// doesn't result in more constraints.
 
-        let cs = ConstraintSystem::<Fr>::new_ref();
-        let mut rng = ark_std::test_rng();
-        let input_bits: Vec<_> = (0..512)
-            .map(|_| Boolean::constant(rng.gen()))
-            .chain((0..512).map(|_| {
-                Boolean::new_witness(ark_relations::ns!(cs, "input bit"), || Ok(true)).unwrap()
-            }))
-            .collect();
-        evaluate_blake2s(&input_bits).unwrap();
-        assert!(cs.is_satisfied().unwrap());
-        assert_eq!(cs.num_constraints(), 21792);
-    }
+		let cs = ConstraintSystem::<Fr>::new_ref();
+		let mut rng = ark_std::test_rng();
+		let input_bits: Vec<_> = (0..512)
+			.map(|_| Boolean::constant(rng.gen()))
+			.chain((0..512).map(|_| {
+				Boolean::new_witness(ark_relations::ns!(cs, "input bit"), || Ok(true)).unwrap()
+			}))
+			.collect();
+		evaluate_blake2s(&input_bits).unwrap();
+		assert!(cs.is_satisfied().unwrap());
+		assert_eq!(cs.num_constraints(), 21792);
+	}
 
-    #[test]
-    fn test_blake2s_constant_constraints() {
-        let cs = ConstraintSystem::<Fr>::new_ref();
-        let mut rng = ark_std::test_rng();
-        let input_bits: Vec<_> = (0..512)
-            .map(|_| Boolean::<Fr>::constant(rng.gen()))
-            .collect();
-        evaluate_blake2s(&input_bits).unwrap();
-        assert_eq!(cs.num_constraints(), 0);
-    }
+	#[test]
+	fn test_blake2s_constant_constraints() {
+		let cs = ConstraintSystem::<Fr>::new_ref();
+		let mut rng = ark_std::test_rng();
+		let input_bits: Vec<_> = (0..512)
+			.map(|_| Boolean::<Fr>::constant(rng.gen()))
+			.collect();
+		evaluate_blake2s(&input_bits).unwrap();
+		assert_eq!(cs.num_constraints(), 0);
+	}
 
-    #[test]
-    fn test_blake2s() {
-        let mut rng = ark_std::test_rng();
+	#[test]
+	fn test_blake2s() {
+		let mut rng = ark_std::test_rng();
 
-        for input_len in (0..32).chain((32..256).filter(|a| a % 8 == 0)) {
-            use digest::*;
-            let mut h = VarBlake2s::new_keyed(&[], 32);
+		for input_len in (0..32).chain((32..256).filter(|a| a % 8 == 0)) {
+			use digest::*;
+			let mut h = VarBlake2s::new_keyed(&[], 32);
 
-            let data: Vec<u8> = (0..input_len).map(|_| rng.gen()).collect();
+			let data: Vec<u8> = (0..input_len).map(|_| rng.gen()).collect();
 
-            h.update(&data);
+			h.update(&data);
 
-            let mut hash_result = Vec::with_capacity(digest::VariableOutput::output_size(&h));
-            h.finalize_variable(|res| hash_result.extend_from_slice(res));
+			let mut hash_result = Vec::with_capacity(digest::VariableOutput::output_size(&h));
+			h.finalize_variable(|res| hash_result.extend_from_slice(res));
 
-            let cs = ConstraintSystem::<Fr>::new_ref();
+			let cs = ConstraintSystem::<Fr>::new_ref();
 
-            let mut input_bits = vec![];
+			let mut input_bits = vec![];
 
-            for input_byte in data.into_iter() {
-                for bit_i in 0..8 {
-                    let cs = ark_relations::ns!(cs, "input bit");
+			for input_byte in data.into_iter() {
+				for bit_i in 0..8 {
+					let cs = ark_relations::ns!(cs, "input bit");
 
-                    input_bits.push(
-                        Boolean::new_witness(cs, || Ok((input_byte >> bit_i) & 1u8 == 1u8))
-                            .unwrap(),
-                    );
-                }
-            }
+					input_bits.push(
+						Boolean::new_witness(cs, || Ok((input_byte >> bit_i) & 1u8 == 1u8))
+							.unwrap(),
+					);
+				}
+			}
 
-            let r = evaluate_blake2s(&input_bits).unwrap();
+			let r = evaluate_blake2s(&input_bits).unwrap();
 
-            assert!(cs.is_satisfied().unwrap());
+			assert!(cs.is_satisfied().unwrap());
 
-            let mut s = hash_result
-                .iter()
-                .flat_map(|&byte| (0..8).map(move |i| (byte >> i) & 1u8 == 1u8));
+			let mut s = hash_result
+				.iter()
+				.flat_map(|&byte| (0..8).map(move |i| (byte >> i) & 1u8 == 1u8));
 
-            for chunk in r {
-                for b in chunk.to_bits_le() {
-                    match b {
-                        Boolean::Is(b) => {
-                            assert!(s.next().unwrap() == b.value().unwrap());
-                        }
-                        Boolean::Not(b) => {
-                            assert!(s.next().unwrap() != b.value().unwrap());
-                        }
-                        Boolean::Constant(b) => {
-                            assert!(input_len == 0);
-                            assert!(s.next().unwrap() == b);
-                        }
-                    }
-                }
-            }
-        }
-    }
+			for chunk in r {
+				for b in chunk.to_bits_le() {
+					match b {
+						Boolean::Is(b) => {
+							assert!(s.next().unwrap() == b.value().unwrap());
+						}
+						Boolean::Not(b) => {
+							assert!(s.next().unwrap() != b.value().unwrap());
+						}
+						Boolean::Constant(b) => {
+							assert!(input_len == 0);
+							assert!(s.next().unwrap() == b);
+						}
+					}
+				}
+			}
+		}
+	}
 }
