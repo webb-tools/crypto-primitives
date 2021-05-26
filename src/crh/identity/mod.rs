@@ -13,7 +13,7 @@ pub struct CRH<F: PrimeField> {
 }
 
 impl<F: PrimeField> CRHTrait for CRH<F> {
-    const INPUT_SIZE_BITS: usize = F::BigInt::NUM_LIMBS * 16;
+    const INPUT_SIZE_BITS: usize = F::BigInt::NUM_LIMBS * 64;
     type Output = F;
     type Parameters = ();
 
